@@ -9,15 +9,6 @@ This package also implements default mappings for a few document types and store
 
 There are also Pydantic parsing models to be used for data pre-processing, which can be passed in to the different uploading methods of the uploaders.
 
-## Installation
-
-To install the rag-data-uploader package, run:
-
-
-    pip install -i https://arm.sero.gic.ericsson.se/artifactory/api/pypi/proj-gaia-pypi-local/simple --extra-index-url https://pypi.org/simple rag-data-uploader
-
-The `--extra-index-url` flag will ensure that dependencies of the package are installed so that the package can be installed in an empty environment.
-
 ## Usage
 
 ### Data Uploaders
@@ -87,7 +78,7 @@ def upload_documents(
         """
 ```
 
-See the [uploader demo notebook](https://gitlab.internal.ericsson.com/product-information-assistant/eva/pia-dataminer/rag-data-uploader/-/blob/develop/notebooks/uploader_demo.ipynb) for an example of how to upload documents to a document store running on `https://localhost:9200`.
+See the [uploader demo notebook](https://github.com/david-rommedahl/projects/blob/main/python/rag-data-uploader/notebooks/uploader_demo.ipynb) for an example of how to upload documents to a document store running on `https://localhost:9200`.
 
 ### Mappings
 
@@ -99,11 +90,11 @@ from rag_data_uploader.utils.mappings import ES7BaseMapping
 mapping = ES7BaseMapping()
 ```
 
-For a more in-depth demo of how to work with the different mapping classes, see the [mapping demo notebook](https://gitlab.internal.ericsson.com/product-information-assistant/eva/pia-dataminer/rag-data-uploader/-/blob/develop/notebooks/mapping_demo.ipynb).
+For a more in-depth demo of how to work with the different mapping classes, see the [mapping demo notebook](https://github.com/david-rommedahl/projects/blob/main/python/rag-data-uploader/notebooks/mapping_demo.ipynb).
 
 ### Parsing Models
 
-Data preprocessing is done using Pydantic parsing models, and these should be passed in to the uploading method used for uploading documents to the vector store. This makes the uploading process more flexible, as the parsing model used can be switched out depending on the data source. See the [parsing model notebook](https://gitlab.internal.ericsson.com/product-information-assistant/eva/pia-dataminer/rag-data-uploader/-/blob/develop/notebooks/parsing_model_test.ipynb) for a more in-depth demonstration of how to use these parsing models.
+Data preprocessing is done using Pydantic parsing models, and these should be passed in to the uploading method used for uploading documents to the vector store. This makes the uploading process more flexible, as the parsing model used can be switched out depending on the data source. See the [parsing model notebook](https://github.com/david-rommedahl/projects/blob/main/python/rag-data-uploader/notebooks/parsing_model_test.ipynb) for a more in-depth demonstration of how to use these parsing models.
 
 
 
