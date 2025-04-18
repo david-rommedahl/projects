@@ -1,5 +1,7 @@
 # rag-data-uploader
 
+**NOTE: This package is a work in progress and is being converted from an earlier, more specific, stage to a new general stage.**
+
 ## Description
 This package implements classes for uploading RAG documents to a data store.  These uploader classes uploads JSON objects to either a vector store instance. The documents can either be uploaded from files or from JSON objects in memory of a running program. 
 

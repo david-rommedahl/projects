@@ -1,4 +1,4 @@
-ARG BASE_IMAGE="armdockerhub.rnd.ericsson.se/python:3.11.0-slim-bullseye"
+ARG BASE_IMAGE="python:3.13.5-slim-bullseye"
 
 FROM ${BASE_IMAGE}
 
@@ -10,10 +10,6 @@ WORKDIR /app
 
 COPY rag_data_uploader /app/rag_data_uploader
 COPY pyproject.toml /app/pyproject.toml
-COPY setup.py /app/setup.py
-COPY MANIFEST.in /app/MANIFEST.in
 COPY VERSION /app/VERSION
 
 RUN pip install .
-
-CMD [ "../bin/sh" ]
