@@ -11,38 +11,29 @@
 # - tqdm
 #
 
-annotated-types==0.7.0
-    # via pydantic
-anyio==4.9.0
-    # via httpx
-certifi==2025.1.31
-    # via
-    #   httpcore
-    #   httpx
-h11==0.14.0
-    # via httpcore
-httpcore==1.0.8
-    # via httpx
-httpx==0.27.0
-    # via hatch.envs.default
-idna==3.10
-    # via
-    #   anyio
-    #   httpx
-pydantic==2.5.2
-    # via hatch.envs.default
-pydantic-core==2.14.5
-    # via pydantic
-sniffio==1.3.1
-    # via
-    #   anyio
-    #   httpx
-tenacity==8.2.2
-    # via hatch.envs.default
-tqdm==4.66.1
-    # via hatch.envs.default
-typing-extensions==4.13.2
-    # via
-    #   anyio
-    #   pydantic
-    #   pydantic-core
+annotated-types==0.7.0    # via pydantic
+    # from https://pypi.org/simple
+anyio==4.9.0              # via httpx
+    # from https://pypi.org/simple
+certifi==2025.1.31        # via httpcore, httpx
+    # from https://pypi.org/simple
+h11==0.14.0               # via httpcore
+    # from https://pypi.org/simple
+httpcore==1.0.8           # via httpx
+    # from https://pypi.org/simple
+httpx==0.27.0             # via hatch.envs.default
+    # from https://pypi.org/simple
+idna==3.10                # via anyio, httpx
+    # from https://pypi.org/simple
+pydantic==2.5.2           # via hatch.envs.default
+    # from https://pypi.org/simple
+pydantic-core==2.14.5     # via pydantic
+    # from https://pypi.org/simple
+sniffio==1.3.1            # via anyio, httpx
+    # from https://pypi.org/simple
+tenacity==8.2.2           # via hatch.envs.default
+    # from https://pypi.org/simple
+tqdm==4.66.1              # via hatch.envs.default
+    # from https://pypi.org/simple
+typing-extensions==4.13.2  # via anyio, pydantic, pydantic-core
+    # from https://pypi.org/simple

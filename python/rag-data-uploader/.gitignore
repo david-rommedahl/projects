@@ -1,0 +1,3 @@
+requirements/
+*__pycache__*
+*.DS_Store

@@ -46,6 +46,8 @@ requires = [
 [tool.hatch.envs.default]
 type = "pip-compile"
 pip-compile-constraint = "default"
+pip-compile-resolver = "uv"
+pip-compile-installer = "uv"
 
 dependencies = [
     "tenacity==8.2.2",
@@ -53,6 +55,14 @@ dependencies = [
     "tqdm==4.66.1",
     "pydantic==2.5.2",
 ]
+
+[tool.hatch.envs.develop]
+extra-dependencies = [
+    "ipykernel",
+]
+
+[tool.uv.pip]
+emit-index-annotation = true
 
 [tool.ruff]
 line-length = 100
