@@ -1,7 +1,14 @@
 # chat-frontend
 
 A minimal React + Vite + TypeScript UI for the chat service: register for an API
-key, chat with streaming responses, and browse past conversations.
+key, chat with streaming responses (rendered as markdown), and browse past
+conversations.
+
+> For the full stack in one command, use Docker from the repo root
+> (`docker compose up --build -d`) — see the [top‑level README](../README.md). In
+> that setup the app is built and served by **nginx**, which also proxies `/api`
+> to the backend (see [Dockerfile](Dockerfile) and [nginx.conf](nginx.conf)). The
+> steps below are for running the dev server directly.
 
 ## Run
 
