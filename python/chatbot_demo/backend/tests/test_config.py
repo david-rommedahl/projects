@@ -84,6 +84,31 @@ def test_database_url(
 
 
 # ---------------------------------------------------------------------------
+# checkpointer_postgres_url computed property
+# ---------------------------------------------------------------------------
+
+
+def test_checkpointer_postgres_url_uses_plain_dialect(monkeypatch: pytest.MonkeyPatch) -> None:
+    """``checkpointer_postgres_url`` must omit the ``+asyncpg`` dialect prefix.
+
+    ``AsyncPostgresSaver`` uses psycopg v3 under the hood and rejects the
+    SQLAlchemy-style ``postgresql+asyncpg://`` URL that the ORM engine uses.
+    """
+    _set_required_env(
+        monkeypatch,
+        POSTGRES_HOST="db.example.com",
+        POSTGRES_PORT="5432",
+        POSTGRES_USER="admin",
+        POSTGRES_PASSWORD="s3cret",
+        POSTGRES_DB="prod",
+    )
+    config = Config()
+    assert config.checkpointer_postgres_url == "postgresql://admin:s3cret@db.example.com:5432/prod"
+    # Sanity-check that the two URLs only differ in the dialect prefix.
+    assert config.database_url == "postgresql+asyncpg://admin:s3cret@db.example.com:5432/prod"
+
+
+# ---------------------------------------------------------------------------
 # Defaults
 # ---------------------------------------------------------------------------
 
@@ -95,4 +120,4 @@ def test_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     assert config.postgres_host == "localhost"
     assert config.postgres_port == 5432
     assert config.log_level == logging.INFO
-    assert config.chat_model == "gpt-4o-mini"
+    assert config.chat_model == "gpt-5.4-1"

@@ -38,6 +38,16 @@ class DatabaseConfig(BaseSettings):
         """Construct the async PostgreSQL connection URL."""
         return f"postgresql+asyncpg://{self.base_db_url}"
 
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def checkpointer_postgres_url(self) -> str:
+        """Construct the plain (psycopg-compatible) PostgreSQL connection URL.
+
+        Used by the LangGraph ``AsyncPostgresSaver`` checkpointer, which uses
+        psycopg v3 internally and does not accept the ``+asyncpg`` dialect prefix.
+        """
+        return f"postgresql://{self.base_db_url}"
+
 
 class Config(DatabaseConfig):
     log_level: int = logging.INFO

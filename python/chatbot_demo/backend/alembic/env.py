@@ -2,6 +2,7 @@ import asyncio
 from logging.config import fileConfig
 
 from alembic import context
+from alembic.runtime.environment import NameFilterParentNames, NameFilterType
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
@@ -35,6 +36,19 @@ target_metadata = Base.metadata
 # ... etc.
 
 
+# Hardcoded table names as of the current version of langgraph-checkpoint-postgres.
+# The checkpointer creates and owns these at runtime (via ``.setup()``); Alembic
+# must not try to manage them, or autogenerate would emit drop_table for each.
+LANGGRAPH_TABLE_NAMES = {"checkpoint_blobs", "checkpoint_migrations", "checkpoint_writes", "checkpoints"}
+
+
+def filter_langgraph_tables(name: str | None, type_: NameFilterType, _parent_names: NameFilterParentNames) -> bool:
+    """Let Alembic ignore the tables used by the LangGraph Postgres checkpointer."""
+    if type_ == "table" and name in LANGGRAPH_TABLE_NAMES:
+        return False
+    return True
+
+
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
 
@@ -53,6 +67,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        include_name=filter_langgraph_tables,
     )
 
     with context.begin_transaction():
@@ -66,7 +81,9 @@ def do_run_migrations(connection: Connection) -> None:
     then runs all pending migrations within a transaction. Designed to be called via
     ``connection.run_sync()`` from an async context.
     """
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(
+        connection=connection, target_metadata=target_metadata, include_name=filter_langgraph_tables
+    )
 
     with context.begin_transaction():
         context.run_migrations()
