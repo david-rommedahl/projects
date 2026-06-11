@@ -30,6 +30,17 @@ TEST_USER = User(id="test-user")
 # ---------------------------------------------------------------------------
 
 
+class StubScalars:
+    """Mimics the result of SQLAlchemy ``result.scalars()``."""
+
+    def __init__(self, items: list[Any]) -> None:
+        self._items = items
+
+    def all(self) -> list[Any]:
+        """Return all items."""
+        return list(self._items)
+
+
 class StubResult:
     """Mimics an SQLAlchemy ``execute()`` result over a list of items."""
 
@@ -39,6 +50,10 @@ class StubResult:
     def scalar_one_or_none(self) -> Any | None:
         """Return the single item, or ``None`` if empty."""
         return self._items[0] if self._items else None
+
+    def scalars(self) -> StubScalars:
+        """Return a :class:`StubScalars` wrapping the stored items."""
+        return StubScalars(self._items)
 
 
 class StubAsyncSession:
