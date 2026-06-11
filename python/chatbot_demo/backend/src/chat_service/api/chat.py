@@ -1,14 +1,26 @@
 """Chat endpoint.
 
 A single ``POST /chat`` that takes a question and streams back the agent's answer
-token by token. Conversations are owned per user: a row in the ``conversation``
-table maps each session token to its owner, so a user can only continue their own
-conversations (the privacy requirement). The message transcript itself is persisted
-by the LangGraph checkpointer, keyed by ``thread_id == session_id``.
+as a sequence of newline-delimited JSON (NDJSON) events. Conversations are owned
+per user: a row in the ``conversation`` table maps each session token to its owner,
+so a user can only continue their own conversations (the privacy requirement). The
+message transcript itself is persisted by the LangGraph checkpointer, keyed by
+``thread_id == session_id``.
+
+Stream protocol: each line is a JSON object with a ``type`` discriminator:
+
+- ``{"type": "token", "content": "..."}`` — a chunk of generated text.
+- ``{"type": "error", "content": "..."}`` — generation failed mid-stream.
+- ``{"type": "done"}`` — terminal event, always emitted last.
+
+A stream is zero or more ``token`` events, optionally one terminal ``error``, and
+always a final ``done`` — so a client can tell a completed answer apart from a
+dropped connection.
 """
 
 import logging
 from collections.abc import AsyncIterator
+from typing import Literal
 from uuid import uuid4
 
 from fastapi import APIRouter
@@ -45,6 +57,34 @@ class ChatRequest(BaseModel):
     session_id: str | None = None
 
 
+class StreamEvent(BaseModel):
+    """Base class for NDJSON stream events."""
+
+    def to_ndjson(self) -> str:
+        """Serialize the event as a single JSON line for the NDJSON stream."""
+        return self.model_dump_json() + "\n"
+
+
+class TokenEvent(StreamEvent):
+    """A chunk of generated assistant text."""
+
+    type: Literal["token"] = "token"
+    content: str
+
+
+class ErrorEvent(StreamEvent):
+    """Signals that generation failed mid-stream."""
+
+    type: Literal["error"] = "error"
+    content: str
+
+
+class DoneEvent(StreamEvent):
+    """Terminal event, always emitted last."""
+
+    type: Literal["done"] = "done"
+
+
 async def _resolve_session(db_session: AsyncSession, user: User, session_id: str | None) -> str:
     """Resolve the conversation for this request, creating or authorising as needed.
 
@@ -69,23 +109,36 @@ async def _resolve_session(db_session: AsyncSession, user: User, session_id: str
 
 
 async def _stream_answer(question: str, session_id: str, checkpointer: BaseCheckpointSaver) -> AsyncIterator[str]:
-    """Yield the agent's answer as a stream of text chunks.
+    """Yield the agent's answer as a stream of NDJSON events.
 
     The agent is built with the shared checkpointer and invoked against the
     ``session_id`` thread, so the conversation history persists in Postgres and a
     follow-up request with the same session token continues the conversation.
+
+    Yields a :class:`TokenEvent` per non-empty assistant chunk. Any mid-stream
+    failure (model timeout, rate limit, upstream error) is caught and surfaced as
+    a single :class:`ErrorEvent` rather than abruptly truncating the response —
+    the HTTP status is already ``200`` and headers are flushed by the time
+    streaming starts, so an error can only be reported in-band. A :class:`DoneEvent`
+    is always emitted last so the client can distinguish completion from a dropped
+    connection.
     """
     agent = build_agent(checkpointer=checkpointer)
-    async for chunk, _metadata in agent.astream(
-        {"messages": [HumanMessage(content=question)]},
-        {"configurable": {"thread_id": session_id}},
-        stream_mode="messages",
-    ):
-        # ``messages`` mode yields (message_chunk, metadata) for every node that
-        # emits messages. We only forward assistant text; tool/other chunks (none
-        # yet, but future-proof) and empty deltas are skipped.
-        if isinstance(chunk, AIMessageChunk) and isinstance(chunk.content, str) and chunk.content:
-            yield chunk.content
+    try:
+        async for chunk, _metadata in agent.astream(
+            {"messages": [HumanMessage(content=question)]},
+            {"configurable": {"thread_id": session_id}},
+            stream_mode="messages",
+        ):
+            # ``messages`` mode yields (message_chunk, metadata) for every node that
+            # emits messages. We only forward assistant text; tool/other chunks (none
+            # yet, but future-proof) and empty deltas are skipped.
+            if isinstance(chunk, AIMessageChunk) and isinstance(chunk.content, str) and chunk.content:
+                yield TokenEvent(content=chunk.content).to_ndjson()
+    except Exception:
+        logger.exception("error generating answer for session_id=%s", session_id)
+        yield ErrorEvent(content="An error occurred while generating the response.").to_ndjson()
+    yield DoneEvent().to_ndjson()
 
 
 @router.post("/chat")
@@ -95,17 +148,24 @@ async def chat(
     db_session: DBSessionDep,
     checkpointer: CheckpointerDep,
 ) -> StreamingResponse:
-    """Answer a question, streaming the response token by token as plain text.
+    """Answer a question, streaming the response as NDJSON events.
 
     Resolves the conversation against the authenticated user (creating a new one
     when ``session_id`` is omitted, or authorising an existing one), then streams
-    the agent's answer. The resolved session token is returned in the
-    ``X-Session-Id`` header for the client to echo back on the next turn.
+    the agent's answer as ``token`` / ``error`` / ``done`` events (see the module
+    docstring). The resolved session token is returned in the ``X-Session-Id``
+    header for the client to echo back on the next turn.
     """
     session_id = await _resolve_session(db_session, user, request.session_id)
     logger.info("chat request session_id=%s owner=%s", session_id, user.id)
     return StreamingResponse(
         _stream_answer(request.question, session_id, checkpointer),
-        media_type="text/plain",
-        headers={"X-Session-Id": session_id},
+        media_type="application/x-ndjson",
+        headers={
+            "X-Session-Id": session_id,
+            # Defeat response buffering (e.g. by reverse proxies) so events reach
+            # the client as they're produced rather than all at once.
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
     )
