@@ -20,13 +20,26 @@ services:
       # `deps` stage pre-built; this named volume preserves it (Docker
       # initialises it from the image on first run, then keeps it).
       - backend-venv:/app/.venv
-    # `uv run` (no --frozen) syncs the venv to uv.lock on every start,
-    # so dependency edits to pyproject.toml / uv.lock are picked up
-    # without having to nuke the named volume.
-    command: uv run uvicorn chat_service.asgi:app --host 0.0.0.0 --port 8000 --reload
+    # entrypoint runs `alembic upgrade head` (so a fresh DB is schema-ready),
+    # then execs the command below. `uv run` (no --frozen) syncs the venv to
+    # uv.lock on every start, so dependency edits are picked up without nuking
+    # the named venv volume.
+    entrypoint: ["sh", "/app/entrypoint.sh"]
+    command: ["uv", "run", "uvicorn", "chat_service.asgi:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     depends_on:
       db:
         condition: service_healthy
+
+  frontend:
+    # Multi-stage build: compile the SPA, then serve it with nginx, which also
+    # reverse-proxies /api to the backend (so the browser sees one origin and no
+    # CORS config is needed). Open http://localhost:8080 once it's up.
+    build:
+      context: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
 
   db:
     image: postgres:17
