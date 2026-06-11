@@ -1,11 +1,9 @@
 import logging
-import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Awaitable, Callable
 
 import uvicorn
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -87,41 +85,6 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
     """Log request validation errors and return FastAPI's default 422 response."""
     logger.warning("Validation error: %s", exc.errors())
     return await request_validation_exception_handler(request, exc)
-
-
-@app.middleware("http")
-async def add_elapsed_time_header(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
-    """Simple middleware to add information about the time elapsed for the response.
-
-    Args:
-        request: The incoming HTTP request.
-        call_next: Callback that forwards the request to the next middleware or route handler.
-    """
-    start_time = time.perf_counter()
-    try:
-        response = await call_next(request)
-    except Exception:
-        process_time = time.perf_counter() - start_time
-        logger.exception(
-            "method=%s path=%s elapsed_ms=%.1f - unhandled exception",
-            request.method,
-            request.url.path,
-            process_time * 1000,
-        )
-        raise
-    process_time = time.perf_counter() - start_time
-    response.headers["X-Elapsed-Time"] = str(round(process_time, 4))
-    log = logger.warning if response.status_code >= 400 else logger.info
-    if request.url.path == "/ping":
-        log = logger.debug
-    log(
-        "method=%s path=%s status=%d elapsed_ms=%.1f",
-        request.method,
-        request.url.path,
-        response.status_code,
-        process_time * 1000,
-    )
-    return response
 
 
 @app.get("/ping")

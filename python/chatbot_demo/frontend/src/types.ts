@@ -1,5 +1,6 @@
 export interface ConversationSummary {
   session_id: string;
+  title: string;
   created_at: string;
 }
 

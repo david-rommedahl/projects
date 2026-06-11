@@ -46,10 +46,12 @@ class ConversationSummary(BaseModel):
     Attributes:
         session_id: The session token; pass it as ``session_id`` to ``POST /chat``
             to continue this conversation.
+        title: Human-readable label derived from the conversation's first message.
         created_at: When the conversation was created.
     """
 
     session_id: str
+    title: str
     created_at: datetime
 
 
@@ -72,7 +74,10 @@ async def list_conversations(user: CurrentUserDep, db_session: DBSessionDep) -> 
     conversations = result.scalars().all()
     logger.info("listing %d conversation(s) for owner=%s", len(conversations), user.id)
     return ConversationsResponse(
-        conversations=[ConversationSummary(session_id=c.session_id, created_at=c.created_at) for c in conversations]
+        conversations=[
+            ConversationSummary(session_id=c.session_id, title=c.title, created_at=c.created_at)
+            for c in conversations
+        ]
     )
 
 

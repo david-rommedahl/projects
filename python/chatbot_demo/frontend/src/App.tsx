@@ -96,6 +96,7 @@ export default function App() {
   return (
     <div className="app">
       <Sidebar
+        apiKey={getApiKey() ?? ""}
         conversations={conversations}
         currentSessionId={sessionId}
         onSelect={selectConversation}

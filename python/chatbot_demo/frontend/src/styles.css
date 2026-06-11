@@ -161,14 +161,57 @@ textarea {
   border-color: var(--accent);
 }
 
-.conversation-id {
-  font-family: ui-monospace, monospace;
+.conversation-title {
   font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .conversation-date {
   font-size: 11px;
   color: var(--muted);
+}
+
+.account {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.account-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.account-label {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.account-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.account-actions button {
+  padding: 4px 10px;
+  font-size: 13px;
+}
+
+.key-box {
+  display: block;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  word-break: break-all;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
 }
 
 .logout {
@@ -213,7 +256,6 @@ textarea {
 }
 
 .message .content {
-  white-space: pre-wrap;
   line-height: 1.5;
   background: var(--panel);
   border: 1px solid var(--border);
@@ -223,6 +265,88 @@ textarea {
 
 .message.user .content {
   background: var(--user);
+  /* User input is rendered verbatim, so preserve their line breaks. */
+  white-space: pre-wrap;
+}
+
+/* ---- Markdown (assistant messages) ---- */
+.markdown > :first-child {
+  margin-top: 0;
+}
+
+.markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown p,
+.markdown ul,
+.markdown ol,
+.markdown blockquote,
+.markdown table,
+.markdown pre {
+  margin: 0 0 0.7em;
+}
+
+.markdown ul,
+.markdown ol {
+  padding-left: 1.4em;
+}
+
+.markdown li {
+  margin: 0.2em 0;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4 {
+  margin: 1em 0 0.5em;
+  line-height: 1.25;
+}
+
+.markdown a {
+  color: var(--accent);
+}
+
+.markdown code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.9em;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+}
+
+.markdown pre {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  overflow-x: auto;
+}
+
+.markdown pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.85em;
+}
+
+.markdown blockquote {
+  border-left: 3px solid var(--border);
+  margin-left: 0;
+  padding-left: 12px;
+  color: var(--muted);
+}
+
+.markdown table {
+  border-collapse: collapse;
+}
+
+.markdown th,
+.markdown td {
+  border: 1px solid var(--border);
+  padding: 4px 8px;
 }
 
 .cursor {

@@ -61,6 +61,8 @@ class Conversation(Base):
         session_id: The session token (a UUID string), also used as the
             checkpointer ``thread_id``. Primary key.
         owner_id: Identifier of the user who owns this conversation.
+        title: Human-readable label for the conversation, derived from the first
+            message when it's created (so the UI doesn't show the opaque token).
         created_at: Timestamp when the conversation was created. Not part of initializer.
     """
 
@@ -68,4 +70,5 @@ class Conversation(Base):
 
     session_id: Mapped[str] = mapped_column(primary_key=True)
     owner_id: Mapped[str] = mapped_column(index=True)
+    title: Mapped[str] = mapped_column(default="", server_default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default_factory=current_utc, init=False)

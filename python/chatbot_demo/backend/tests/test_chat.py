@@ -84,12 +84,14 @@ def test_chat_starts_new_conversation(
     session_id = response.headers["X-Session-Id"]
     UUID(session_id)
 
-    # A Conversation row owned by the caller was added and committed.
+    # A Conversation row owned by the caller was added and committed, titled
+    # from the first message.
     assert len(stub_session.added) == 1
     added = stub_session.added[0]
     assert isinstance(added, Conversation)
     assert added.session_id == session_id
     assert added.owner_id == TEST_USER.id
+    assert added.title == "hi"
     assert stub_session.committed is True
 
 
@@ -178,3 +180,24 @@ def test_chat_requires_question(client: TestClient, _stub_agent: None) -> None:
     """Omitting ``question`` is a 422 validation error."""
     response = client.post("/api/v1/chat", json={})
     assert response.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Title derivation
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("question", "expected"),
+    [
+        ("Short one", "Short one"),
+        ("  spaced \n out  text ", "spaced out text"),  # whitespace collapsed
+        ("x" * 80, "x" * 60 + "…"),  # truncated at the limit
+        ("   ", "New conversation"),  # empty -> fallback
+    ],
+)
+def test_derive_title(question: str, expected: str) -> None:
+    """Titles are whitespace-collapsed, truncated, and fall back when empty."""
+    from chat_service.api.chat import _derive_title
+
+    assert _derive_title(question) == expected

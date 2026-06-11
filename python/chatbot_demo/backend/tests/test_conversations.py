@@ -14,23 +14,26 @@ from chat_service.db.models import Conversation
 from tests.conftest import TEST_USER, StubAsyncSession, StubResult
 
 
-def _conversation(session_id: str, created_at: datetime) -> Conversation:
-    c = Conversation(session_id=session_id, owner_id=TEST_USER.id)
+def _conversation(session_id: str, created_at: datetime, title: str = "") -> Conversation:
+    c = Conversation(session_id=session_id, owner_id=TEST_USER.id, title=title)
     c.created_at = created_at
     return c
 
 
 def test_list_conversations_returns_owned(client: TestClient, stub_session: StubAsyncSession) -> None:
-    """Returns the caller's conversations as summaries."""
+    """Returns the caller's conversations as summaries, including the title."""
     t1 = datetime(2026, 6, 11, 9, 0, tzinfo=timezone.utc)
     t2 = datetime(2026, 6, 11, 10, 0, tzinfo=timezone.utc)
-    stub_session.execute_results = [StubResult([_conversation("s2", t2), _conversation("s1", t1)])]
+    stub_session.execute_results = [
+        StubResult([_conversation("s2", t2, title="Newer chat"), _conversation("s1", t1, title="Older chat")])
+    ]
 
     response = client.get("/api/v1/conversations")
 
     assert response.status_code == 200
     body = response.json()
     assert [c["session_id"] for c in body["conversations"]] == ["s2", "s1"]
+    assert [c["title"] for c in body["conversations"]] == ["Newer chat", "Older chat"]
     assert body["conversations"][0]["created_at"] == "2026-06-11T10:00:00Z"
 
 

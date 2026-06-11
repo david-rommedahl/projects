@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { Message } from "../types";
 
 interface Props {
@@ -40,7 +42,15 @@ export function ChatView({ messages, streaming, error, onSend }: Props) {
           <div key={i} className={"message " + m.role}>
             <div className="role">{m.role}</div>
             <div className="content">
-              {m.content}
+              {m.role === "assistant" ? (
+                // Assistant output is markdown; user input is shown verbatim so it
+                // isn't reinterpreted (and react-markdown escapes raw HTML by default).
+                <div className="markdown">
+                  <Markdown remarkPlugins={[remarkGfm]}>{m.content}</Markdown>
+                </div>
+              ) : (
+                m.content
+              )}
               {streaming && i === messages.length - 1 && m.role === "assistant" && <span className="cursor">▋</span>}
             </div>
           </div>

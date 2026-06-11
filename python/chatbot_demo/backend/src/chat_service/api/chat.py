@@ -85,11 +85,29 @@ class DoneEvent(StreamEvent):
     type: Literal["done"] = "done"
 
 
-async def _resolve_session(db_session: AsyncSession, user: User, session_id: str | None) -> str:
+TITLE_MAX_LENGTH = 60
+
+
+def _derive_title(question: str) -> str:
+    """Derive a short conversation title from the first message.
+
+    Uses the leading text of the question (whitespace collapsed, truncated) so the
+    sidebar shows something meaningful without an LLM summarisation call.
+    """
+    collapsed = " ".join(question.split())
+    if not collapsed:
+        return "New conversation"
+    if len(collapsed) <= TITLE_MAX_LENGTH:
+        return collapsed
+    return collapsed[:TITLE_MAX_LENGTH].rstrip() + "…"
+
+
+async def _resolve_session(db_session: AsyncSession, user: User, session_id: str | None, question: str) -> str:
     """Resolve the conversation for this request, creating or authorising as needed.
 
     - ``session_id is None``: start a new conversation — mint a token, insert a
-      :class:`Conversation` owned by ``user``, and return it.
+      :class:`Conversation` owned by ``user`` (titled from ``question``), and
+      return it.
     - ``session_id`` supplied: it must exist and be owned by ``user``; otherwise
       raise 404. The same status is used for "not found" and "owned by someone
       else" so the endpoint doesn't leak which session tokens exist.
@@ -99,7 +117,7 @@ async def _resolve_session(db_session: AsyncSession, user: User, session_id: str
     """
     if session_id is None:
         session_id = str(uuid4())
-        db_session.add(Conversation(session_id=session_id, owner_id=user.id))
+        db_session.add(Conversation(session_id=session_id, owner_id=user.id, title=_derive_title(question)))
         await db_session.commit()
         logger.info("created conversation session_id=%s owner=%s", session_id, user.id)
         return session_id
@@ -156,7 +174,7 @@ async def chat(
     docstring). The resolved session token is returned in the ``X-Session-Id``
     header for the client to echo back on the next turn.
     """
-    session_id = await _resolve_session(db_session, user, request.session_id)
+    session_id = await _resolve_session(db_session, user, request.session_id, request.question)
     logger.info("chat request session_id=%s owner=%s", session_id, user.id)
     return StreamingResponse(
         _stream_answer(request.question, session_id, checkpointer),
