@@ -1,27 +1,50 @@
 from typing import Annotated
 
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy import select
 
+from chat_service.auth.api_keys import hash_api_key
 from chat_service.auth.models import User
+from chat_service.db.models import UserAccount
+from chat_service.db.session import DBSessionDep
+
+# auto_error=False so a missing/malformed header yields ``None`` and we can raise
+# our own 401 with a consistent message, rather than HTTPBearer's default.
+_bearer_scheme = HTTPBearer(auto_error=False)
 
 
 async def get_current_user(
-    x_user_id: Annotated[str | None, Header(alias="X-User-Id")] = None,
+    db_session: DBSessionDep,
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer_scheme)] = None,
 ) -> User:
-    """Resolve the current user from the ``X-User-Id`` request header.
+    """Authenticate via ``Authorization: Bearer <api_key>``.
 
-    A lightweight stub standing in for real authentication: it trusts the
-    header value as the user's identity. This is the seam where real auth
-    (e.g. a verified JWT) slots in later — endpoints depend on the resulting
-    :class:`User` to scope conversations per user, so swapping the
-    implementation here leaves the rest of the API unchanged.
+    Hashes the presented key and looks it up in the ``user_account`` table,
+    returning the matching user's identity. The raw key is never stored — only
+    its hash — so this compares hashes. Endpoints depend on the resulting
+    :class:`User` to scope conversations per user.
+
+    Raises:
+        HTTPException: 401 if the header is missing or the key is unknown.
     """
-    if not x_user_id:
+    if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing X-User-Id header",
+            detail="Missing API key",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-    return User(id=x_user_id)
+    result = await db_session.execute(
+        select(UserAccount).where(UserAccount.api_key_hash == hash_api_key(credentials.credentials))
+    )
+    account = result.scalar_one_or_none()
+    if account is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid API key",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return User(id=account.id)
 
 
 # Reusable annotated FastAPI dependency which resolves the current user.

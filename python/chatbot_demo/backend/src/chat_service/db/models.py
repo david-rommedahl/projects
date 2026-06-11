@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from uuid import uuid4
 
 from sqlalchemy import DateTime
 from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, mapped_column
@@ -19,6 +20,29 @@ def current_utc() -> datetime:
     Used as a default factory and onupdate callable for timestamp columns.
     """
     return datetime.now(timezone.utc)
+
+
+class UserAccount(Base):
+    """A registered user, authenticated by an API key.
+
+    The raw API key is generated at registration, returned to the user once, and
+    never stored — only its SHA-256 hash is kept. Authentication hashes the
+    presented key and looks it up here. ``id`` is the stable, non-secret identity
+    used as :attr:`Conversation.owner_id`.
+
+    Attributes:
+        email: The user's registration email. Unique.
+        api_key_hash: SHA-256 hex digest of the user's API key. Unique.
+        id: Server-generated stable identifier (UUID string). Not part of initializer.
+        created_at: Timestamp when the user registered. Not part of initializer.
+    """
+
+    __tablename__ = "user_account"
+
+    email: Mapped[str] = mapped_column(unique=True, index=True)
+    api_key_hash: Mapped[str] = mapped_column(unique=True, index=True)
+    id: Mapped[str] = mapped_column(primary_key=True, default_factory=lambda: str(uuid4()), init=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default_factory=current_utc, init=False)
 
 
 class Conversation(Base):
