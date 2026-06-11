@@ -1,0 +1,48 @@
+name: chatbot-demo
+
+services:
+  backend:
+    # Build the deps-only stage of the multi-stage Dockerfile so the
+    # container has uv + locked dependencies but not a baked-in copy of
+    # src/. The bind mount below supplies live source for hot-reload.
+    build:
+      context: ./backend
+      target: deps
+    ports:
+      - "8000:8000"
+    env_file: .env
+    environment:
+      POSTGRES_HOST: db
+    volumes:
+      # Live source — uvicorn --reload watches this dir.
+      - ./backend:/app
+      # The bind mount above would otherwise hide the .venv that the
+      # `deps` stage pre-built; this named volume preserves it (Docker
+      # initialises it from the image on first run, then keeps it).
+      - backend-venv:/app/.venv
+    # `uv run` (no --frozen) syncs the venv to uv.lock on every start,
+    # so dependency edits to pyproject.toml / uv.lock are picked up
+    # without having to nuke the named volume.
+    command: uv run uvicorn chat_service.asgi:app --host 0.0.0.0 --port 8000 --reload
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:17
+    ports:
+      - "5432:5432"
+    env_file: .env
+    environment:
+      PGDATA: /var/lib/postgresql/data/17   # For compatibility with postgres 18
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  pgdata:
+  backend-venv:
