@@ -43,7 +43,14 @@ class Config(DatabaseConfig):
     log_level: int = logging.INFO
 
     openai_api_key: str
-    chat_model: str = "gpt-4o-mini"
+    chat_model: str = "gpt-5.4-1"
+
+    # Optional override for the OpenAI-compatible base URL. Leave unset to use
+    # OpenAI directly (api.openai.com). Point it at an Azure AI Foundry resource's
+    # OpenAI v1 surface (e.g. "https://<resource>.services.ai.azure.com/openai/v1")
+    # to use an internal Azure deployment instead — the protocol is identical, so
+    # only base_url + api_key + chat_model (the deployment name) change.
+    openai_base_url: str | None = None
 
     @field_validator("log_level", mode="before")
     @classmethod
@@ -54,6 +61,10 @@ class Config(DatabaseConfig):
             value: The log level, either as a numeric level or a string name (e.g. "DEBUG").
         """
         if isinstance(value, str):
+            # mode="before" means we see the raw env string, which may be a
+            # numeric level ("10") or a level name ("DEBUG").
+            if value.isdigit():
+                return int(value)
             return logging._nameToLevel[value.upper()]
         return value
 
